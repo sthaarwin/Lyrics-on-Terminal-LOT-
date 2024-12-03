@@ -6,7 +6,7 @@
 #include <vector>
 #include <sstream>
 #include <regex>
-#include <dirent.h>  
+#include <dirent.h>
 #include <iomanip>
 
 struct LyricLine {
@@ -23,7 +23,7 @@ int parseTimestamp(const std::string& timestamp) {
             double seconds = std::stod(match[2]);
             return minutes * 60 + static_cast<int>(seconds);
         } catch (const std::exception&) {
-            return -1; 
+            return -1;
         }
     }
     return -1;
@@ -32,21 +32,21 @@ int parseTimestamp(const std::string& timestamp) {
 std::vector<LyricLine> loadLyrics(const std::string& filename) {
     std::vector<LyricLine> lyrics;
     std::ifstream file(filename);
-    
+
     if (!file.is_open()) {
         std::cerr << "Error: Could not open file " << filename << std::endl;
         return lyrics;
     }
-    
+
     std::string line;
     std::regex timestampRegex("\\[(\\d+):(\\d+\\.\\d+)\\]");
-    
+
     while (std::getline(file, line)) {
         std::smatch match;
         if (std::regex_search(line, match, timestampRegex) && match.size() > 2) {
             std::string timestamp = match.str(0);
             std::string text = line.substr(match.position() + match.length());
-            
+
             int timeInSeconds = parseTimestamp(timestamp);
             if (timeInSeconds != -1) {
                 lyrics.push_back({text, timeInSeconds});
@@ -59,11 +59,11 @@ std::vector<LyricLine> loadLyrics(const std::string& filename) {
 }
 
 void banner() {
-    #ifdef _WIN32
+#ifdef _WIN32
     system("cls");
-    #else
+#else
     system("clear");
-    #endif
+#endif
     std::cout << " _______________________________________" << std::endl;
     std::cout << "|                                       | " << std::endl;
     std::cout << "|          LOT - BY ARWIN               | " << std::endl;
@@ -77,7 +77,7 @@ std::vector<std::string> listFilesInDirectory(const std::string& directoryPath, 
         std::cerr << "Error: Could not open directory " << directoryPath << std::endl;
         return files;
     }
-    
+
     struct dirent* entry;
     while ((entry = readdir(dir)) != nullptr) {
         std::string filename = entry->d_name;
@@ -133,7 +133,7 @@ int main() {
     std::string extension = ".mp3";
 
     auto songFiles = listFilesInDirectory(songsDir, extension);
-    
+
     if (songFiles.empty()) {
         std::cerr << "No songs found in the directory." << std::endl;
         return 1;
@@ -148,7 +148,8 @@ int main() {
         std::cerr << "Invalid choice." << std::endl;
         return 1;
     }
-
+    system("clear");
+    banner();
     std::string selectedSong = songFiles[choice - 1];
     std::string musicFile = songsDir + "/" + selectedSong + extension;
     std::string lyricsFile = lyricsDir + "/" + selectedSong + ".lrc";
@@ -162,21 +163,19 @@ int main() {
     std::thread audioThread(playAudio, musicFile);
 
     auto startTime = std::chrono::steady_clock::now();
-    int currentLyricIndex = 0;
+    size_t currentLyricIndex = 0;
 
     while (audioThread.joinable()) {
         auto currentTime = std::chrono::steady_clock::now();
         std::chrono::duration<double> elapsed = currentTime - startTime;
 
         while (currentLyricIndex < lyrics.size() && lyrics[currentLyricIndex].timestamp <= static_cast<int>(elapsed.count())) {
-            if (currentLyricIndex > 0) {
-                //std::cout << std::endl;
-            }
-            typeInText(lyrics[currentLyricIndex].text, 50); 
+            std::this_thread::sleep_for(std::chrono::milliseconds(300)); // Added delay
+            typeInText(lyrics[currentLyricIndex].text, 50);
             currentLyricIndex++;
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     audioThread.join();
     
